@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2ねんせい かんじマスター</title>
+    <title>2ねんせい かんじマスター（テンポよく！）</title>
     
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     
@@ -89,7 +89,7 @@
         .kanji-card.cleared-test .crown-mark { display: block; }
 
         /* 練習画面 */
-        #practice-screen { background-color: #FFF8E1; }
+        #practice-screen { background-color: #FFF8E1; position: relative; }
         #practice-screen.test-bg { background-color: #E1F5FE; }
         .practice-header {
             width: 100%; max-width: 500px; display: flex;
@@ -119,6 +119,53 @@
             font-size: 10rem; animation: pop 0.5s ease-out; pointer-events: none;
             display: none; z-index: 100; text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
         }
+
+        /* --- 追加された結果メニュー（ポップアップ） --- */
+        #result-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            border-radius: 20px; /* 画面からはみ出ないように少し丸める */
+        }
+        
+        #result-overlay.active {
+            display: flex;
+        }
+
+        .result-title {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            color: #FF9800;
+            text-shadow: 2px 2px 0 #FFF;
+        }
+
+        .result-btn {
+            width: 220px;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-family: inherit;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        .result-btn:active { transform: scale(0.95); }
+
+        .btn-next { background: #4CAF50; } /* 緑：次へ */
+        .btn-retry { background: #FF9800; } /* オレンジ：もう一度 */
+        .btn-home { background: #607D8B; }  /* グレー：ホーム */
+
 
         /* エラー表示用 */
         #error-overlay {
@@ -167,11 +214,17 @@
             <div id="anim-crown" class="reward-animation">👑</div>
         </div>
         <div id="message-area">なぞってみよう！</div>
-        <button class="nav-btn" onclick="retry()" style="background:#FF7043; margin-top:10px;">書き直す</button>
+        
+        <div id="result-overlay">
+            <div class="result-title" id="result-title-text">できた！</div>
+            <button class="result-btn btn-next" onclick="goNext()">つぎの かんじ ▶</button>
+            <button class="result-btn btn-retry" onclick="retry()">もういちど ↺</button>
+            <button class="result-btn btn-home" onclick="showScreen('list-screen')">ホームにもどる 🏠</button>
+        </div>
     </div>
 
     <script>
-        // エラーハンドリング（プログラムが壊れたときに通知する）
+        // エラーハンドリング
         window.onerror = function(msg, url, line) {
             const errDiv = document.getElementById('error-overlay');
             const errMsg = document.getElementById('error-message');
@@ -180,7 +233,6 @@
         };
 
         // --- 2年生漢字データ (160文字) ---
-        // データの不整合を防ぐため、文字列から生成します
         const kanjiString = "引:ひく,羽:はね,雲:くも,園:えん,遠:とおい,黄:きいろ,何:なに,夏:なつ,家:いえ,科:か,歌:うた,画:が,会:あう,回:まわる,海:うみ,絵:え,外:そと,角:かど,楽:たのしい,活:かつ,間:あいだ,丸:まる,岩:いわ,顔:かお,汽:き,記:き,帰:かえる,弓:ゆみ,牛:うし,魚:さかな,京:きょう,強:つよい,教:おしえる,近:ちかい,兄:あに,形:かたち,計:けい,元:げん,言:いう,原:げん,戸:と,古:ふるい,午:ご,後:あと,語:ご,工:こう,公:こう,広:ひろい,交:こう,光:ひかり,考:かんがえる,行:いく,高:たかい,合:あう,国:くに,黒:くろ,今:いま,才:さい,細:ほそい,作:つくる,算:さん,止:とまる,市:し,矢:や,姉:あね,思:おもう,紙:かみ,寺:てら,自:じ,時:じ,室:しつ,社:しゃ,弱:よわい,首:くび,秋:あき,週:しゅう,春:はる,書:かく,少:すこし,場:ば,色:いろ,食:たべる,心:こころ,新:あたらしい,親:おや,図:ず,数:かず,西:にし,声:こえ,星:ほし,晴:はれる,切:きる,雪:ゆき,船:ふね,線:せん,前:まえ,組:くみ,走:はしる,多:おおい,太:ふとい,体:からだ,台:だい,地:ち,池:いけ,知:しる,茶:ちゃ,昼:ひる,長:ながい,鳥:とり,朝:あさ,直:なおす,通:とおる,弟:おとうと,店:みせ,点:てん,電:でん,刀:かたな,冬:ふゆ,当:とう,東:ひがし,答:こたえ,頭:あたま,同:おなじ,道:みち,読:よむ,内:うち,南:みなみ,肉:にく,馬:うま,売:うる,買:かう,麦:むぎ,半:はん,番:ばん,父:ちち,風:かぜ,分:わける,聞:きく,米:こめ,歩:あるく,母:はは,方:ほう,北:きた,毎:まい,妹:いもうと,万:まん,明:あかるい,鳴:なく,毛:け,門:もん,夜:よる,野:の,友:とも,用:よう,曜:よう,来:くる,里:さと,理:り,話:はなし";
         
         const kanjiData = kanjiString.split(',').map(item => {
@@ -248,6 +300,9 @@
             currentChar = item;
             showScreen('practice-screen');
 
+            // ★メニューが出ていたら隠す処理を追加
+            document.getElementById('result-overlay').classList.remove('active');
+
             const screen = document.getElementById('practice-screen');
             const msgArea = document.getElementById('message-area');
             const readingDisplay = document.getElementById('current-reading');
@@ -270,23 +325,37 @@
             document.getElementById('anim-star').style.display = 'none';
             document.getElementById('anim-crown').style.display = 'none';
 
-            // HanziWriterの初期化（エラーチェック付き）
+            // HanziWriter設定 (日本語データ読み込み)
             try {
                 if (typeof HanziWriter === 'undefined') {
                     throw new Error("インターネットにつながっていません");
                 }
                 const isTest = (currentMode === 'test');
+                
                 writer = HanziWriter.create('character-target-div', item.char, {
                     width: 300, height: 300, padding: 10,
                     showOutline: !isTest,
                     strokeAnimationSpeed: 1, delayBetweenStrokes: 200,
                     radicalColor: '#2E7D32', drawingWidth: 25,
                     outlineColor: '#DDD', strokeColor: '#333',
-                    highlightColor: '#FF7043', showHintAfterMisses: 1
+                    highlightColor: '#FF7043', 
+                    showHintAfterMisses: 1,
+                    
+                    // 日本語専用データの読み込み
+                    charDataLoader: function(char, onComplete) {
+                        fetch('https://cdn.jsdelivr.net/npm/hanzi-writer-data-jp@0.3.0/' + char + '.json')
+                            .then(res => res.json())
+                            .then(data => onComplete(data))
+                            .catch(err => {
+                                console.error("JP Data Load Error", err);
+                                alert("データが見つかりませんでした。ネット接続を確認してください。");
+                            });
+                    }
                 });
+
                 startQuiz();
             } catch (e) {
-                alert("エラー: インターネットせつぞくを かくにんしてください。");
+                alert("エラー: " + e.message);
             }
         }
 
@@ -309,24 +378,52 @@
             });
         }
 
-        // --- クリア処理 ---
+        // --- クリア処理（メニュー表示に変更） ---
         function handleComplete() {
             const msg = document.getElementById('message-area');
+            const resultTitle = document.getElementById('result-title-text');
+            
             if (currentMode === 'practice') {
                 msg.innerText = "できたー！ ⭐ゲット！";
+                resultTitle.innerText = "できたー！⭐"; 
+                resultTitle.style.color = "#4CAF50";
                 document.getElementById('anim-star').style.display = 'block';
+                
+                // 2年生用の保存キーを使用
                 progressPractice[currentChar.char] = true;
                 localStorage.setItem('kanjiMasterPractice_Grade2', JSON.stringify(progressPractice));
             } else {
                 msg.innerText = "すごい！！ 👑ゲット！";
+                resultTitle.innerText = "すごい！👑"; 
+                resultTitle.style.color = "#F44336";
                 document.getElementById('anim-crown').style.display = 'block';
+                
+                // 2年生用の保存キーを使用
                 progressTest[currentChar.char] = true;
                 localStorage.setItem('kanjiMasterTest_Grade2', JSON.stringify(progressTest));
             }
-            setTimeout(() => { showScreen('list-screen'); }, 1500);
+
+            // メニューを表示
+            setTimeout(() => {
+                document.getElementById('result-overlay').classList.add('active');
+            }, 1000);
         }
 
-        function retry() { startApp(currentChar); }
+        function retry() { 
+            startApp(currentChar); 
+        }
+
+        // --- 次の漢字へ進む機能 ---
+        function goNext() {
+            const currentIndex = kanjiData.findIndex(k => k.char === currentChar.char);
+            
+            if (currentIndex >= 0 && currentIndex < kanjiData.length - 1) {
+                startApp(kanjiData[currentIndex + 1]);
+            } else {
+                alert("これでおしまい！ すごい！");
+                showScreen('list-screen');
+            }
+        }
 
         function resetData() {
             if (confirm("すべてのデータを けしますか？")) {
