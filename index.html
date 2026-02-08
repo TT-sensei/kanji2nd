@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2ねんせい かんじマスター（修正版）</title>
+    <title>2ねんせい かんじマスター（日本データ対応版）</title>
     
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     
@@ -226,7 +226,6 @@
     <script>
         // エラーハンドリング
         window.onerror = function(msg, url, line) {
-            // データロードエラーはalertで出すので、ここでは重大なエラーのみ
             console.error(msg);
         };
 
@@ -323,7 +322,7 @@
             document.getElementById('anim-star').style.display = 'none';
             document.getElementById('anim-crown').style.display = 'none';
 
-            // HanziWriter設定 (日本語データ読み込み + バックアップ機能)
+            // HanziWriter設定（KanjiVGベースの日本データを使用）
             try {
                 if (typeof HanziWriter === 'undefined') {
                     throw new Error("インターネットにつながっていません");
@@ -339,30 +338,24 @@
                     highlightColor: '#FF7043', 
                     showHintAfterMisses: 1,
                     
-                    // ▼▼▼ 修正: データ読み込みロジック ▼▼▼
+                    // ▼▼▼ ここが最重要！KanjiVGのデータを使った「特製日本データ」を読み込む ▼▼▼
                     charDataLoader: function(char, onComplete) {
-                        // 1. まず日本語専用データを試す
-                        fetch('https://cdn.jsdelivr.net/npm/hanzi-writer-data-jp@0.3.0/' + char + '.json')
+                        // mnakoさんが公開しているKanjiVGベースのデータを使います
+                        fetch('https://cdn.jsdelivr.net/gh/mnako/hanzi-writer-data-ja@master/data/' + char + '.json')
                             .then(res => {
                                 if (!res.ok) throw new Error('JP Data Not Found');
                                 return res.json();
                             })
                             .then(data => onComplete(data))
                             .catch(err => {
-                                // 2. 失敗したら、標準データ（中国語ベース）に切り替える
+                                // 万が一データがない場合は、標準データ（中国語ベース）にフォールバック
                                 console.log("JP data missing, switching to standard.", err);
-                                fetch('https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/' + char + '.json')
-                                    .then(res => {
-                                        if(!res.ok) throw new Error('Standard Data Not Found');
-                                        return res.json();
-                                    })
-                                    .then(data => onComplete(data))
-                                    .catch(e => {
-                                        alert("データが見つかりません。インターネットを確認してください。");
-                                    });
+                                fetch('https://cdn.jsdelivr.net/npm/hanzi-writer-data@latest/' + char + '.json')
+                                    .then(res => res.json())
+                                    .then(data => onComplete(data));
                             });
                     }
-                    // ▲▲▲ ここまで ▲▲▲
+                    // ▲▲▲▲▲▲
                 });
 
                 startQuiz();
