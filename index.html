@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2ねんせい かんじマスター（テンポよく！）</title>
+    <title>2ねんせい かんじマスター（修正版）</title>
     
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     
@@ -120,7 +120,7 @@
             display: none; z-index: 100; text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
         }
 
-        /* --- 追加された結果メニュー（ポップアップ） --- */
+        /* --- 結果メニュー（ポップアップ） --- */
         #result-overlay {
             position: absolute;
             top: 0;
@@ -133,7 +133,7 @@
             align-items: center;
             justify-content: center;
             z-index: 200;
-            border-radius: 20px; /* 画面からはみ出ないように少し丸める */
+            border-radius: 20px;
         }
         
         #result-overlay.active {
@@ -226,10 +226,8 @@
     <script>
         // エラーハンドリング
         window.onerror = function(msg, url, line) {
-            const errDiv = document.getElementById('error-overlay');
-            const errMsg = document.getElementById('error-message');
-            errDiv.style.display = 'flex';
-            errMsg.innerHTML = "エラーがでました。<br>インターネットにつながっているか<br>かくにんしてください。<br><br>" + msg;
+            // データロードエラーはalertで出すので、ここでは重大なエラーのみ
+            console.error(msg);
         };
 
         // --- 2年生漢字データ (160文字) ---
@@ -300,7 +298,7 @@
             currentChar = item;
             showScreen('practice-screen');
 
-            // ★メニューが出ていたら隠す処理を追加
+            // メニューが出ていたら隠す
             document.getElementById('result-overlay').classList.remove('active');
 
             const screen = document.getElementById('practice-screen');
@@ -325,7 +323,7 @@
             document.getElementById('anim-star').style.display = 'none';
             document.getElementById('anim-crown').style.display = 'none';
 
-            // HanziWriter設定 (日本語データ読み込み)
+            // HanziWriter設定 (日本語データ読み込み + バックアップ機能)
             try {
                 if (typeof HanziWriter === 'undefined') {
                     throw new Error("インターネットにつながっていません");
@@ -341,16 +339,30 @@
                     highlightColor: '#FF7043', 
                     showHintAfterMisses: 1,
                     
-                    // 日本語専用データの読み込み
+                    // ▼▼▼ 修正: データ読み込みロジック ▼▼▼
                     charDataLoader: function(char, onComplete) {
+                        // 1. まず日本語専用データを試す
                         fetch('https://cdn.jsdelivr.net/npm/hanzi-writer-data-jp@0.3.0/' + char + '.json')
-                            .then(res => res.json())
+                            .then(res => {
+                                if (!res.ok) throw new Error('JP Data Not Found');
+                                return res.json();
+                            })
                             .then(data => onComplete(data))
                             .catch(err => {
-                                console.error("JP Data Load Error", err);
-                                alert("データが見つかりませんでした。ネット接続を確認してください。");
+                                // 2. 失敗したら、標準データ（中国語ベース）に切り替える
+                                console.log("JP data missing, switching to standard.", err);
+                                fetch('https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/' + char + '.json')
+                                    .then(res => {
+                                        if(!res.ok) throw new Error('Standard Data Not Found');
+                                        return res.json();
+                                    })
+                                    .then(data => onComplete(data))
+                                    .catch(e => {
+                                        alert("データが見つかりません。インターネットを確認してください。");
+                                    });
                             });
                     }
+                    // ▲▲▲ ここまで ▲▲▲
                 });
 
                 startQuiz();
@@ -378,7 +390,7 @@
             });
         }
 
-        // --- クリア処理（メニュー表示に変更） ---
+        // --- クリア処理 ---
         function handleComplete() {
             const msg = document.getElementById('message-area');
             const resultTitle = document.getElementById('result-title-text');
@@ -389,7 +401,6 @@
                 resultTitle.style.color = "#4CAF50";
                 document.getElementById('anim-star').style.display = 'block';
                 
-                // 2年生用の保存キーを使用
                 progressPractice[currentChar.char] = true;
                 localStorage.setItem('kanjiMasterPractice_Grade2', JSON.stringify(progressPractice));
             } else {
@@ -398,7 +409,6 @@
                 resultTitle.style.color = "#F44336";
                 document.getElementById('anim-crown').style.display = 'block';
                 
-                // 2年生用の保存キーを使用
                 progressTest[currentChar.char] = true;
                 localStorage.setItem('kanjiMasterTest_Grade2', JSON.stringify(progressTest));
             }
